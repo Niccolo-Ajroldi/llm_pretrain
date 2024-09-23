@@ -70,14 +70,14 @@ def main(_):
       train_losses = []
     
     # Checkpoint
-    if master_process and cfg.save_intermediate_checkpoints \
+    if cfg.save_intermediate_checkpoints \
         and micro_step % cfg.save_every_micro_steps == 0:
-      save_checkpoint(micro_step-1, model, engine, cfg, JOB_IDX)
+      save_checkpoint(micro_step-1, engine, local_rank, cfg, JOB_IDX)
 
-  # End of training: log and save checkpoint
+  # End of training
   print_master(f"=== Training Completed! ===")
-  if master_process and cfg.save_last_checkpoint:
-    save_checkpoint(micro_step-1, model, engine, cfg, JOB_IDX)
+  if cfg.save_last_checkpoint:
+    save_checkpoint(micro_step-1, engine, local_rank, cfg, JOB_IDX)
 
   # DDP slaughtering
   destroy_ddp()

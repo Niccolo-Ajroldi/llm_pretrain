@@ -1,14 +1,31 @@
+"""
+TorchEngine defines a training wrapper.
+It takes care of DDP and FSDP routines, torch compile, grad scaler,
+autocasting, clipping and gradient accumulation.
+Ultimately, it defines a training step and an evaluation function.
+
+NOTE: FSDP currently does not support gradient accumulation 
+      outside no_sync() when using CPU offloading
+
+TODO:
+- use_orig_params=cfg.torch_compile
+"""
+
+from functools import partial
+from contextlib import nullcontext
 
 import torch
 
 from torch import distributed as dist
 from torch.nn import CrossEntropyLoss
 from torch.nn.parallel import DistributedDataParallel as DDP
-from contextlib import nullcontext
+from torch.distributed.fsdp import MixedPrecision
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
+from torch.distributed.fsdp.fully_sharded_data_parallel import CPUOffload
 
 from models import get_param_groups
 from optim import intialize_optimizer, initalize_scheduler
-
 
 def _move_to_device(batch, seq_len, device):
   """Slice batch to get inputs and targets, and move them to device."""
@@ -47,9 +64,13 @@ class TorchEngine(torch.nn.Module):
     self.seq_len = cfg.seq_len
     self.accumulation_steps = cfg.grad_accumulation_steps
     self.grad_clip = cfg.grad_clip
+    self.fsdp = cfg.fsdp
     self.dtype = cfg.dtype
 
     self.device = device
+  
+    device_type = 'cuda' if 'cuda' in device else 'cpu'
+    ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[self.dtype]
     
     # Load model state dict
     if cfg.resume:
@@ -59,16 +80,28 @@ class TorchEngine(torch.nn.Module):
     # Move model to device and to DDP
     self.model = model.to(device)
     if torch.distributed.is_initialized():
-      self.model = DDP(self.model, device_ids=[local_rank])
+      if self.fsdp:
+        print(f"Wrapping model with FSDP.")
+        my_auto_wrap_policy = partial(
+          size_based_auto_wrap_policy, min_num_params=100
+        )
+        model = FSDP(
+          model, 
+          auto_wrap_policy=my_auto_wrap_policy,
+          mixed_precision=MixedPrecision(ptdtype),
+          use_orig_params=cfg.torch_compile,  # TODO
+        )        
+      else:
+        print(f"FSDP disabled, defaulting to DDP.")
+        self.model = DDP(self.model, device_ids=[local_rank])
 
     # Compile
     if cfg.torch_compile:
-      print(f"Compiling the model...")
+      print(f"Compiling model.")
+      self.orig_model = self.model
       self.model = torch.compile(self.model)
 
     # AMP
-    device_type = 'cuda' if 'cuda' in device else 'cpu'
-    ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[self.dtype]
     self.ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
     # Grad scaler if training in fp16, if enabled=False, scaler is a no-op

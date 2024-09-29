@@ -1,5 +1,3 @@
-## CONFIG file
-## change paths with your own!
 
 determinisitc: False
 seed: 100
@@ -15,18 +13,18 @@ eval: False
 validset_path: null
 eval_every_micro_steps: null
 
-# model: 'pythia-70m-deduped'
-# rms_norm: True
-
-model: 'transformer'
-d_model: 4096
-mlp_class: 'glu'
-expand: '8/3'
-n_layers: 32
-n_heads: 32
+model: 'pythia-6.9b-deduped'
 rms_norm: True
-tie_embeddings: False
-torch_compile: True
+
+# model: 'transformer'
+# d_model: 4096
+# mlp_class: 'glu'
+# expand: '8/3'
+# n_layers: 32
+# n_heads: 32
+# rms_norm: True
+# tie_embeddings: False
+# torch_compile: True
 
 # Enable Fully Sharded Data Parallel
 fsdp: True
@@ -62,11 +60,11 @@ lr_end_pct: null
 log_every_micro_steps: 1
 print_progress: True
 
-use_wandb: False
+use_wandb: True
 wandb_project: 'llm'
 wandb_dir: '/fast/najroldi/logs/llm/wandb'
-wandb_run_name: 'debug_7b_01'
-exp_name: 'debug_7b_01'
+wandb_run_name: 'debug_7b_02'
+exp_name: 'debug_7b_02'
 out_dir: '/fast/najroldi/exp/llm'
 over_write: True
 

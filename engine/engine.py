@@ -22,14 +22,13 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed.fsdp import MixedPrecision
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.distributed.fsdp.wrap import size_based_auto_wrap_policy
-from torch.distributed.fsdp.fully_sharded_data_parallel import CPUOffload
 
 from models import get_param_groups
 from optim import intialize_optimizer, initalize_scheduler
 
 def _move_to_device(batch, seq_len, device):
   """Slice batch to get inputs and targets, and move them to device."""
-  
+
   inputs = batch['input_ids'][:,:seq_len]
   targets = batch['input_ids'][:,1:(seq_len+1)]
 
@@ -57,7 +56,7 @@ class TorchEngine(torch.nn.Module):
       ckpt,
       ):
     super().__init__()
-    
+
     self.micro_steps = 0
     self.accumulated_samples = 0
 
@@ -71,7 +70,7 @@ class TorchEngine(torch.nn.Module):
   
     device_type = 'cuda' if 'cuda' in device else 'cpu'
     ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[self.dtype]
-    
+
     # Load model state dict
     if cfg.resume:
       model.load_state_dict(ckpt['state_dict'])
@@ -123,9 +122,9 @@ class TorchEngine(torch.nn.Module):
 
   def step(self, batch):
     """Wraps a fwd pass, backwd pass, and optimization step."""
-    
+
     self.model.train()
-    
+
     self.micro_steps += 1
     self.accumulated_samples += 1
 
@@ -138,7 +137,8 @@ class TorchEngine(torch.nn.Module):
 
     # forward pass with autocasting
     with self.ctx:
-      logits = self.model(inputs)
+      output = self.model(inputs)
+      logits = getattr(output, 'logits', output)
       loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
       loss = loss / self.accumulation_steps
 
@@ -164,37 +164,45 @@ class TorchEngine(torch.nn.Module):
 
       # flush the gradients
       self.optimizer.zero_grad(set_to_none=True) 
-      
+
       # step the scheduler
       if self.scheduler:
         self.scheduler.step()
-  
+
     return loss_val
 
 
   @torch.no_grad()
   def eval(self, validloader):
     """Evaluate model on a dataloader."""
-    
+
     self.model.eval()
-    
+
     # Compute loss on validloader
-    losses = []
+    total_loss = 0.0
+    num_batches = 0
     for batch in validloader:
       inputs, targets = _move_to_device(batch, self.seq_len, self.device)
-      with self.ctx:
-        logits = self.model(inputs)
-      loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
-      losses.append(loss.item())
-    
-    summed_loss = sum(losses)
 
-    # Reduce loss across processes
-    if not dist.is_initialized():
-      avg_loss = summed_loss / len(validloader)
-    else:
-      total_loss = torch.tensor([summed_loss], device=self.device)
-      dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)
-      avg_loss = total_loss.item() / (dist.get_world_size() * len(validloader))
-      
+      with self.ctx:
+        output = self.model(inputs)
+        logits = getattr(output, 'logits', output)
+        loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
+
+        if torch.isnan(loss) or loss is None:
+          raise ValueError("Validation loss is nan")
+
+        total_loss += loss.item()
+        num_batches += 1
+
+    # reduce loss across processes
+    if dist.is_initialized():
+      loss_num_batches = torch.tensor([total_loss, num_batches], device=self.device)
+      dist.all_reduce(loss_num_batches)
+      total_loss = loss_num_batches[0].item() / dist.get_world_size()
+      num_batches = int(loss_num_batches[1].item()) // dist.get_world_size()  # superflous redundant if dataloader has drop_last=True
+
+    # Calculate average loss
+    avg_loss = total_loss / num_batches
+
     return avg_loss

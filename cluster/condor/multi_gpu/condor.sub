@@ -5,8 +5,8 @@ LOGS_DIR=/fast/najroldi/logs/llm
 executable=/home/najroldi/llm_pretrain/cluster/condor/multi_gpu/run.sh
 
 # Job specific vars
-config=config/config.yaml
-n_jobs=8
+config=config/pythia_7B.yaml
+n_jobs=1
 
 # Args
 arguments = $(config) $(Process)
@@ -20,6 +20,6 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 1000000
 request_cpus = 96
 request_gpus = 8
-requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+requirements = (TARGET.CUDADeviceName == "NVIDIA H100 80GB HBM3") && (TARGET.Machine != "i105.internal.cluster.is.localnet")
 
 queue $(n_jobs)

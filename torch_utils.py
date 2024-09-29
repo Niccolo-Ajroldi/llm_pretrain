@@ -34,6 +34,7 @@ def pytorch_setup(cfg):
   random.seed(cfg.seed + seed_offset)
   np.random.seed(cfg.seed + seed_offset)
   torch.manual_seed(cfg.seed + seed_offset)
+  torch.cuda.manual_seed(cfg.seed + seed_offset)
   
   torch.backends.cuda.matmul.allow_tf32 = True
   torch.backends.cudnn.allow_tf32 = True

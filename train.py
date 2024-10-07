@@ -41,7 +41,7 @@ def main(_):
   
   # Model
   model, model_cfg = construct_model(cfg)
-  
+
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
   

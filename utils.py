@@ -15,7 +15,7 @@ def load_config(path, job_idx=None):
   Parse a yaml file and return the correspondent config as a namedtuple.
   If the config files has multiple entries, returns the one corresponding to job_idx.
   """
-  
+
   with open(path, 'r') as file:
     config_dict = yaml.safe_load(file)
   Config = namedtuple('Config', config_dict.keys())

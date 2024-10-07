@@ -6,7 +6,7 @@ seed: 100
 
 trainset_path: "/fast/najroldi/data/lm/slim_pajama/new_sp_15B_tokens/train"
 vocab_size: 50280
-seq_len: 2048
+seq_len: 32
 sampler: 'sequential'
 sampler_seed: null
 num_workers: 4
@@ -19,15 +19,13 @@ eval_every_micro_steps: null
 # rms_norm: True
 
 model: 'transformer'
-d_model: 4096
+d_model: 768
 mlp_class: 'glu'
 expand: '8/3'
-n_layers: 32
-n_heads: 32
+n_layers: 12
+n_heads: 12
 rms_norm: True
 tie_embeddings: False
-
-# Torch compile still to be tested with fsdp!
 torch_compile: False
 
 # Enable Fully Sharded Data Parallel
@@ -39,7 +37,7 @@ steps_budget: 320
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 2
+micro_batch_size: 1
 grad_accumulation_steps: 32
 
 # note: choose between {float32, float16, bfloat16}

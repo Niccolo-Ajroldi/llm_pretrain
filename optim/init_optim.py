@@ -1,7 +1,6 @@
 """Intialize optimizer and scheduler."""
 
 import torch
-import schedulefree
 from .lr_schedule import WarmupCosine, WSD, WarmupConstant
 
 
@@ -50,6 +49,7 @@ def intialize_optimizer(param_groups, cfg):
     )
   
   elif cfg.optim == 'sfo_adamw':
+    import schedulefree
     # warmup steps for schedulefree must be specified here
     warmup_steps = cfg.warmup_steps if isinstance(cfg.warmup_steps, int) \
       else int(cfg.warmup_steps * cfg.steps_budget)

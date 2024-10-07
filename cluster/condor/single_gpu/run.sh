@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate ssm
+conda activate llm
 
 # Job specific vars
 config=$1

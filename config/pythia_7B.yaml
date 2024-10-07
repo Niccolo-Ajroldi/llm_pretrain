@@ -62,7 +62,7 @@ print_progress: True
 
 use_wandb: True
 wandb_project: 'llm'
-wandb_dir: '/fast/najroldi/logs/llm/wandb'
+wandb_dir: '/fast/najroldi/logs/llm'
 wandb_run_name: 'debug_7b_02'
 exp_name: 'debug_7b_02'
 out_dir: '/fast/najroldi/exp/llm'

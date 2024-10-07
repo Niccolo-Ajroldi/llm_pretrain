@@ -11,9 +11,9 @@ sampler: 'sequential'
 sampler_seed: null
 num_workers: 4
 
-eval: False
-validset_path: null
-eval_every_micro_steps: null
+eval: True
+validset_path: "/fast/najroldi/data/lm/slim_pajama/valid/validation"
+eval_every_micro_steps: 8
 
 # model: 'pythia-70m-deduped'
 # rms_norm: True
@@ -40,7 +40,7 @@ steps_budget: 320
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
 micro_batch_size: 2
-grad_accumulation_steps: 32
+grad_accumulation_steps: 4
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -66,7 +66,7 @@ print_progress: True
 
 use_wandb: False
 wandb_project: 'llm'
-wandb_dir: '/fast/najroldi/logs/llm/wandb'
+wandb_dir: '/fast/najroldi/logs/llm'
 wandb_run_name: 'debug_7b_01'
 exp_name: 'debug_7b_01'
 out_dir: '/fast/najroldi/exp/llm'

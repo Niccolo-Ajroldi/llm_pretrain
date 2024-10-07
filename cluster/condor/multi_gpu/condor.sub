@@ -1,23 +1,23 @@
 
 # Define variables
-# NOTE: executable should be a full path
-LOGS_DIR=/fast/najroldi/logs/llm
 executable=/home/najroldi/llm_pretrain/cluster/condor/multi_gpu/run.sh
+environment=HOME=/home/najroldi
 
 # Job specific vars
-config=config/pythia_7B.yaml
-n_jobs=1
+config=config/first_steps/workers_sweep.yaml
+n_jobs=7
 
 # Args
 arguments = $(config) $(Process)
 
 # Logs
+LOGS_DIR=/fast/najroldi/logs/llm
 error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
 output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs
-request_memory = 1000000
+request_memory = 2000000
 request_cpus = 96
 request_gpus = 8
 requirements = (TARGET.CUDADeviceName == "NVIDIA H100 80GB HBM3") && (TARGET.Machine != "i105.internal.cluster.is.localnet")

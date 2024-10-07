@@ -1,7 +1,9 @@
 #!/bin/bash
 
 source ~/miniforge3/etc/profile.d/conda.sh
-conda activate ssm2
+conda activate llm
+
+export HOME=/home/najroldi
 
 # Job specific vars
 config=$1
